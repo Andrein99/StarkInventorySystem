@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StarkInventorySystem.Domain.Interfaces
+namespace StarkInventorySystem.Domain.Common
 {
     public interface IDomainEvent // Interfaz para eventos de dominio
     {

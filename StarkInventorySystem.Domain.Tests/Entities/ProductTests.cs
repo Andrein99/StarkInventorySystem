@@ -2,7 +2,7 @@
 using StarkInventorySystem.Domain.ValueObjects;
 using StarkInventorySystem.Domain.DomainExceptions;
 
-namespace StarkInventorySystem.Domain.Tests
+namespace StarkInventorySystem.Domain.Tests.Entities
 {
     public class ProductTests
     {
