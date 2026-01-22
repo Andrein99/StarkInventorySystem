@@ -45,6 +45,6 @@ namespace StarkInventorySystem.Application.Interfaces.Services
         /// <param name="claimType">Tipo de claim</param>
         /// <param name="claimValue">Valor del claim</param>
         /// <returns>True o False, dependiendo de si tiene claims.</returns>
-        bool hasClaim(string claimType, string claimValue);
+        bool HasClaim(string claimType, string claimValue);
     }
 }

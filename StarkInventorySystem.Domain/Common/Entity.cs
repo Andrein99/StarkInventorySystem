@@ -20,7 +20,7 @@ namespace StarkInventorySystem.Domain.Common
             _domainEvents.Add(domainEvent);
         }
 
-        protected void ClearDomainEvents()
+        public void ClearDomainEvents()
         {
             _domainEvents.Clear();
         }
