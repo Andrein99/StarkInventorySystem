@@ -44,16 +44,32 @@ namespace StarkInventorySystem.Application.Common.Mediator
             }
 
             // Invocar el método HandleAsync del handler
-            var method = handlerType.GetMethod(nameof(IRequestHandler<IRequest<TResponse>, TResponse>));
+            var method = handlerType.GetMethod(
+                nameof(IRequestHandler<IRequest<TResponse>, TResponse>.HandleAsync),
+                new[] { requestType, typeof(CancellationToken) });
 
             if (method == null)
             {
-                throw new InvalidOperationException(
-                    $"El método HandleAsync {handlerType.Name} no fue encontrado en el handler.");
+                method = handlerType.GetMethod(
+                    nameof(IRequestHandler<IRequest<TResponse>, TResponse>.HandleAsync),
+                    new[] { requestType });
+                
+                if (method == null)
+                {
+                    throw new InvalidOperationException(
+                        $"El método HandleAsync no fue encontrado en el handler {handlerType.Name}. " +
+                        $"Asegurarse de que el handler implemente IRequestHandler<{requestType.Name}, {responseType.Name}>");
+                }
+                
             }
 
+            // Invocar el handler con los parámetros correctos
+            object[] parameters = method.GetParameters().Length == 2
+                ? new object[] { request, cancellationToken }
+                : new object[] { request };
+
             // Invocar el handler
-            var result = method.Invoke(handler, new object[] { request, cancellationToken });
+            var result = method.Invoke(handler, parameters);
 
             // El resultado es un Task<TResponse>, por lo que hacemos un await.
             if (result is Task<TResponse> task)

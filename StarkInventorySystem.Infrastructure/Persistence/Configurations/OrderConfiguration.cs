@@ -47,7 +47,8 @@ namespace StarkInventorySystem.Infrastructure.Persistence.Configurations
             builder.Property(o => o.CancelledAt);
 
             builder.Property(o => o.CancellationReason)
-                .HasMaxLength(500);
+                .HasMaxLength(500)
+                .IsRequired(false); // Permite tener valores nulos - Sólo se asigna el token cuando cancelada
 
             // 🎯 Mapea el objecto de valor Shipping Address
             builder.OwnsOne(o => o.ShippingAddress, address =>
@@ -100,7 +101,11 @@ namespace StarkInventorySystem.Infrastructure.Persistence.Configurations
                 .OnDelete(DeleteBehavior.Cascade); // Borra los items si se borra la orden
 
             // Expone items como una propiedad de navegación
-            builder.Navigation("_items").UsePropertyAccessMode(PropertyAccessMode.Field);
+            builder.Navigation("_items")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasField("_items");
+
+            builder.Ignore(o => o.Items); // Ignora la propiedad de solo lectura
 
             // Ignora eventos de dominio
             builder.Ignore(o => o.DomainEvents);
