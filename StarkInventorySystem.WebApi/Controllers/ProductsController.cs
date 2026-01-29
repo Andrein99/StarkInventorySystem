@@ -2,11 +2,17 @@
 using StarkInventorySystem.Application.Common.Interfaces;
 using StarkInventorySystem.Application.Products.Commands.AddStock;
 using StarkInventorySystem.Application.Products.Commands.CreateProduct;
+using StarkInventorySystem.Application.Products.Commands.UpdateProductInfo;
+using StarkInventorySystem.Application.Products.Commands.UpdateProductPrice;
+using StarkInventorySystem.Application.Products.Queries.GetAllProducts;
 using StarkInventorySystem.Application.Products.Queries.GetLowStockProducts;
 using StarkInventorySystem.Application.Products.Queries.GetProductById;
 
 namespace StarkInventorySystem.WebApi.Controllers
 {
+    /// <summary>
+    /// Controlador para gestionar productos en el inventario.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
@@ -136,6 +142,40 @@ namespace StarkInventorySystem.WebApi.Controllers
         }
 
         /// <summary>
+        /// Obtiene todos los productos con paginación y filtro opcional por estado de activación.
+        /// </summary>
+        /// <param name="pageNumber">Número de la página (default: 1)</param>
+        /// <param name="pageSize">Tamaño de la página (default: 10, max: 100)</param>
+        /// <param name="isActive">Filtra por estado activo (opcional)</param>
+        /// <returns>Lista paginada de productos</returns>
+        /// <response code="200">Productos retornados exitosamente</response>
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllProducts(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] bool? isActive = null)
+        {
+            _logger.LogInformation("Obteniendo todos los productos. Página: {PageNumber}, Tamaño de página: {PageSize}", pageNumber, pageSize);
+        
+            var query = new GetAllProductsQuery
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                IsActive = isActive
+            };
+
+            var result = await _mediator.SendAsync(query);
+
+            if (result.IsFailure)
+            { 
+                return BadRequest(new { error = result.Error });
+            }
+
+            return Ok(result.Value);
+        }
+
+        /// <summary>
         /// Actualiza el precio de un producto existente.
         /// </summary>
         /// <param name="id">ID del producto</param>
@@ -152,9 +192,67 @@ namespace StarkInventorySystem.WebApi.Controllers
         {
             _logger.LogInformation("Actualizando precio para el producto {ProductId} a {Price} {Currency}", id, request.Price, request.Currency);
 
-            // TODO: Implementar UpdatePriceCommand y su handler
-            return StatusCode(StatusCodes.Status501NotImplemented,
-                new { message = "La funcionalidad de actualización de precios está lista pronto." });
+            var command = new UpdateProductPriceCommand
+            {
+                ProductId = id,
+                NewPrice = request.Price,
+                Currency = request.Currency
+            };
+
+            var result = await _mediator.SendAsync(command);
+
+            if (result.IsFailure)
+            {
+                _logger.LogWarning("Falló la actualización de precio del producto {ProductId}: {Error}", id, result.Error);
+
+                if (result.Error.Contains("not found"))
+                    return NotFound(new { error = result.Error });
+
+                return BadRequest(new { error = result.Error });
+            }
+
+            _logger.LogInformation("Precio actualizado correctamente para el producto {ProductId}", id);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Actualiza la información de un producto existente.
+        /// </summary>
+        /// <param name="id">ID del producto</param>
+        /// <param name="request">Información actualizada del producto</param>
+        /// <returns>Confirmación exitosa</returns>
+        /// <response code="204">El producto se actualizó correctamente</response>
+        /// <response code="400">Input inválido</response>
+        /// <response code="404">Producto no encontrado</response>
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProductInfo(Guid id, [FromBody] UpdateProductInfoRequest request)
+        {
+            _logger.LogInformation("Actualizando la información del producto: {ProductId}", id);
+
+            var command = new UpdateProductInfoCommand
+            {
+                ProductId = id,
+                NewName = request.Name,
+                NewDescription = request.Description
+            };
+
+            var result = await _mediator.SendAsync(command);
+
+            if (result.IsFailure)
+            {
+                _logger.LogWarning("Falló al actualizar la información del producto {ProductId}: {Error}", id, result.Error);
+
+                if (result.Error.Contains("not found"))
+                    return NotFound(new { error = result.Error });
+
+                return BadRequest(new { error = result.Error });
+            }
+
+            _logger.LogInformation("Producto actualizado correctamente: {ProductId}", id);
+            return NoContent();
         }
     }
 }
@@ -176,6 +274,15 @@ public class UpdatePriceRequest
 {
     public decimal Price { get; set; }
     public string Currency { get; set; }
+}
+
+/// <summary>
+/// Modelo de request para actualizar la información del producto.
+/// </summary>
+public class UpdateProductInfoRequest
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
 }
 
 #endregion

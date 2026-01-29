@@ -3,6 +3,9 @@ using StarkInventorySystem.Application.Common.Interfaces;
 using StarkInventorySystem.Application.Orders.Commands.CancelOrder;
 using StarkInventorySystem.Application.Orders.Commands.ConfirmOrder;
 using StarkInventorySystem.Application.Orders.Commands.CreateOrder;
+using StarkInventorySystem.Application.Orders.Commands.DeliverOrder;
+using StarkInventorySystem.Application.Orders.Commands.ShipOrder;
+using StarkInventorySystem.Application.Orders.Queries.GerOrdersByCustomer;
 using StarkInventorySystem.Application.Orders.Queries.GetOrderById;
 
 namespace StarkInventorySystem.WebApi.Controllers
@@ -80,6 +83,44 @@ namespace StarkInventorySystem.WebApi.Controllers
             return Ok(result.Value);
         }
 
+
+        /// <summary>
+        /// Obtiene todas las órdenes asociadas a un cliente específico.
+        /// </summary>
+        /// <param name="customerId">ID del cliente</param>
+        /// <returns>Lista de ordenes del cliente</returns>
+        /// <response code="200">Las ordenes fueron retornadas correctamente</response>
+        [HttpGet("customer/{customerId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetCustomerOrders(Guid customerId)
+        {
+            _logger.LogInformation("Retornando ordenes para cliente: {CustomerId}", customerId);
+
+            var query = new GetOrdersByCustomerQuery(customerId);
+            var result = await _mediator.SendAsync(query);
+
+            if (result.IsFailure)
+            {
+                return BadRequest(new { error = result.Error });
+            }
+
+            return Ok(new
+            {
+                customerId,
+                count = result.Value.Count,
+                orders = result.Value
+            });
+        }
+
+        /// <summary>
+        /// Cancela la orden con el ID especificado (libera el stock reservado si está en estado confirmado).
+        /// </summary>
+        /// <param name="id">ID de la orden</param>
+        /// <param name="request">Razón de cancelación</param>
+        /// <returns>Confirmación exitosa</returns>
+        /// <response code="204">Orden cancelada correctamente</response>
+        /// <response code="400">No se puede cancelar la orden (ya fue enviada o entregada)</response>
+        /// <response code="404">Orden no encontrada</response>
         [HttpPost("{id}/cancel")]
         public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequest request)
         {
@@ -148,9 +189,21 @@ namespace StarkInventorySystem.WebApi.Controllers
         {
             _logger.LogInformation("Intentando enviar la orden con ID: {OrderId}", id);
 
-            // TODO: Implementar ShipOrderCommand
-            return StatusCode(StatusCodes.Status501NotImplemented,
-                new { message = "Ship order feature will be implemented soon" });
+            var command = new ShipOrderCommand(id);
+            var result = await _mediator.SendAsync(command);
+
+            if (result.IsFailure)
+            {
+                _logger.LogWarning("Falló enviar la orden {OrderId}: {Error}", id, result.Error);
+
+                if (result.Error.Contains("not found"))
+                    return NotFound(new { error = result.Error });
+
+                return BadRequest(new { error = result.Error });
+            }
+
+            _logger.LogInformation("Orden enviada correctamente: {OrderId}", id);
+            return NoContent();
         }
 
         /// <summary>
@@ -166,9 +219,21 @@ namespace StarkInventorySystem.WebApi.Controllers
         {
             _logger.LogInformation("Intentando entregar la orden con ID: {OrderId}", id);
 
-            // TODO: Implement DeliverOrderCommand
-            return StatusCode(StatusCodes.Status501NotImplemented,
-                new { message = "Deliver order feature will be implemented soon" });
+            var command = new DeliverOrderCommand(id);
+            var result = await _mediator.SendAsync(command);
+
+            if (result.IsFailure)
+            {
+                _logger.LogWarning("Fallo al entregar la orden {OrderId}: {Error}", id, result.Error);
+
+                if (result.Error.Contains("not found"))
+                    return NotFound(new { error = result.Error });
+
+                return BadRequest(new { error = result.Error });
+            }
+
+            _logger.LogInformation("Orden entregada correctamente: {OrderId}", id);
+            return NoContent();
         }
     }
 }
