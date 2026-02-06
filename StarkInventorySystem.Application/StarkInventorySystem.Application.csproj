@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Auth\**" />
+    <EmbeddedResource Remove="Auth\**" />
+    <None Remove="Auth\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\StarkInventorySystem.Domain\StarkInventorySystem.Domain.csproj" />
   </ItemGroup>
 

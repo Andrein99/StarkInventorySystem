@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using StarkInventorySystem.Domain.Common;
 using StarkInventorySystem.Domain.Entities;
+using StarkInventorySystem.Infrastructure.Identity.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +16,10 @@ namespace StarkInventorySystem.Infrastructure.Persistence
     /// <summary>
     /// Contexto de base de datos para la aplicación, maneja las conexiones a la base de datos y el mapeo de entidades.
     /// </summary>
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<
+        ApplicationUser, // Entidad User
+        IdentityRole<Guid>,  // Entidad Rol
+        Guid> // Type de llave primaria
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -23,7 +29,16 @@ namespace StarkInventorySystem.Infrastructure.Persistence
         // DbSets para los aggregate roots sólamente (No child entities)
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
-        // Nota: No hay DbSet para OrderItem ya que es una entidad hija de Order
+
+        // Note: Users, Roles, UserRoles, etc. are inherited from IdentityDbContext
+        // Available DbSets from Identity:
+        // - Users (ApplicationUser)
+        // - Roles (IdentityRole<Guid>)
+        // - UserRoles (IdentityUserRole<Guid>)
+        // - UserClaims (IdentityUserClaim<Guid>)
+        // - UserLogins (IdentityUserLogin<Guid>)
+        // - UserTokens (IdentityUserToken<Guid>)
+        // - RoleClaims (IdentityRoleClaim<Guid>)
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,7 +47,42 @@ namespace StarkInventorySystem.Infrastructure.Persistence
             // Configuraciones adicionales del modelo pueden ir aquí
             // Esto encuentra todas las clases que implementan IEntityTypeConfiguration<T>
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-        
+
+            // Personalización de nombres de tablas de Identity (opcional, pero sirve para mayor claridad)
+            modelBuilder.Entity<ApplicationUser>(entity =>
+            {
+                entity.ToTable("Users");
+            });
+
+            modelBuilder.Entity<IdentityRole<Guid>>(entity =>
+            {
+                entity.ToTable("Roles");
+            });
+
+            modelBuilder.Entity<IdentityUserRole<Guid>>(entity =>
+            {
+                entity.ToTable("UserRoles");
+            });
+
+            modelBuilder.Entity<IdentityUserClaim<Guid>>(entity =>
+            {
+                entity.ToTable("UserClaims");
+            });
+
+            modelBuilder.Entity<IdentityUserLogin<Guid>>(entity =>
+            {
+                entity.ToTable("UserLogins");
+            });
+
+            modelBuilder.Entity<IdentityUserToken<Guid>>(entity =>
+            {
+                entity.ToTable("UserTokens");
+            });
+
+            modelBuilder.Entity<IdentityRoleClaim<Guid>>(entity =>
+            {
+                entity.ToTable("RoleClaims");
+            });
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
