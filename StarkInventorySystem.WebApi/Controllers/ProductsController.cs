@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using StarkInventorySystem.Application.Common.Interfaces;
 using StarkInventorySystem.Application.Products.Commands.AddStock;
 using StarkInventorySystem.Application.Products.Commands.CreateProduct;
@@ -16,6 +17,7 @@ namespace StarkInventorySystem.WebApi.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
+    [Authorize]
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -35,8 +37,11 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <response code="200">Producto creado exitosamente</response>
         /// <response code="400">Input inválido o ruptura de regla de negocio</response>
         [HttpPost]
+        [Authorize(Roles = "Admin,InventoryManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateProduct([FromBody] CreateProductCommand command)
         {
             _logger.LogInformation("Creando producto con SKU: {Sku}", command.Sku);
@@ -63,6 +68,7 @@ namespace StarkInventorySystem.WebApi.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetProduct(Guid id)
         {
             _logger.LogInformation("Obteniendo producto con ID: {ProductId}", id);
@@ -85,7 +91,10 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <returns>Lista de productos con stock bajo</returns>
         /// <response>Productos con bajo stock retornados correctamente</response>
         [HttpGet("low-stock")]
+        [Authorize(Roles = "Admin,InventoryManager")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetLowStockProducts()
         {
             _logger.LogInformation("Obteniendo productos con bajo stock");
@@ -115,8 +124,11 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <response code="400">Cantidad inválida o producto no encontrado</response>
         /// <response code="404">Producto no encontrado</response>
         [HttpPost("{id}/stock")]
+        [Authorize(Policy = "WarehouseOperations")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddStock(Guid id, [FromBody] AddStockRequest request)
         {
@@ -151,6 +163,7 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <response code="200">Productos retornados exitosamente</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetAllProducts(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -185,8 +198,11 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <response code="400">Precio inválido</response>
         /// <response code="404">Producto no encontrado</response>
         [HttpPut("{id}/price")]
+        [Authorize(Roles = "Admin,InventoryManager")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePrice(Guid id, [FromBody] UpdatePriceRequest request)
         {
@@ -225,8 +241,11 @@ namespace StarkInventorySystem.WebApi.Controllers
         /// <response code="400">Input inválido</response>
         /// <response code="404">Producto no encontrado</response>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,InventoryManager")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateProductInfo(Guid id, [FromBody] UpdateProductInfoRequest request)
         {
